@@ -269,7 +269,6 @@ naiveBayes <- setRefClass("naiveBayes",
                       correct <- 0
                       for (i in 1:nrow(X_test)){
                         predicted <- model$predict(X_test[i, "text"])
-                        print(i)
                         if (X_test$author[i] == predicted){
                           correct <- correct + 1
                         }
