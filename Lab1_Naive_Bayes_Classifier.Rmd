@@ -1,0 +1,319 @@
+---
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Probability and Statistics
+
+# Lab Assignment 1: Naive Bayes Classifier
+
+### *Taras Yaroshko, Liubomyr Oleksyuk, Yaroslav Klym*
+
+## Introduction
+
+During the past three weeks, you learned a couple of essential notions
+and theorems, and one of the most important among them is the *Bayes
+theorem*.
+
+One of its applications is **Naive Bayes classifier**, which is a
+probabilistic classifier whose aim is to determine which class some
+observation probably belongs to by using the Bayes formula:
+$$\mathsf{P}(\mathrm{class}\mid \mathrm{observation})=\frac{\mathsf{P}(\mathrm{observation}\mid\mathrm{class})\mathsf{P}(\mathrm{class})}{\mathsf{P}(\mathrm{observation})}$$
+
+Under the strong independence assumption, one can calculate
+$\mathsf{P}(\mathrm{observation} \mid \mathrm{class})$ as
+$$\mathsf{P}(\mathrm{observation}) = \prod_{i=1}^{n} \mathsf{P}(\mathrm{feature}_i), \qquad \mathsf{P}(\mathrm{observation} \mid \mathrm{class}) = \prod_{i=1}^{n} \mathsf{P}(\mathrm{feature}_i \mid \mathrm{class}),$$
+where $n$ is the total number of features describing a given
+observation. Thus, $\mathsf{P}(\mathrm{class}|\mathrm{observation})$ now
+can be calculated as
+
+$$\mathsf{P}(\mathrm{class} \mid \mathrm{\mathrm{observation}}) = \mathsf{P}(\mathrm{class})\times \prod_{i=1}^{n}\frac{\mathsf{P}(\mathrm{feature}_i\mid \mathrm{class})}{\mathsf{P}(\mathrm{feature}_i)}\tag{1}$$
+
+All the terms on the right-hand side can be estimated from the data as
+respective relative frequencies;\
+see [this
+site](https://monkeylearn.com/blog/practical-explanation-naive-bayes-classifier/)
+for more detailed explanations.
+
+## Data description
+
+There are 5 datasets uploaded on the cms.
+
+To determine your variant, take your team number from the list of teams
+on cms and take *mod 5* - this is the number of your data set.
+
+-   **0 - authors** This data set consists of citations of three famous
+    writers: Edgar Alan Poe, Mary Wollstonecraft Shelley and HP
+    Lovecraft. The task with this data set is to classify a piece of
+    text with the author who was more likely to write it.
+
+-   **1 - discrimination** This data set consists of tweets that have
+    discriminatory (sexism or racism) messages or of tweets that are of
+    neutral mood. The task is to determine whether a given tweet has
+    discriminatory mood or does not.
+
+-   **2 - fake news** This data set contains data of American news: a
+    headline and an abstract of the article. Each piece of news is
+    classified as fake or credible. The task is to classify the news
+    from test.csv as credible or fake.
+
+-   **3 - sentiment** All the text messages contained in this data set
+    are labeled with three sentiments: positive, neutral or negative.
+    The task is to classify some text message as the one of positive
+    mood, negative or neutral.
+
+-   **4 - spam** This last data set contains SMS messages classified as
+    spam or non-spam (ham in the data set). The task is to determine
+    whether a given message is spam or non-spam.
+
+Each data set consists of two files: *train.csv* and *test.csv*. The
+first one you will need find the probabilities distributions for each of
+the features, while the second one is needed for checking how well your
+classifier works.
+
+```{r}
+# here goes a list of recommended libraries,
+# though you may install other ones if they are needed
+library(tidytext)
+library(readr)
+library(dplyr)
+library(ggplot2)
+```
+
+## Instructions
+
+-   The first step is data pre-processing, which includes removing
+    punctuation marks and stop words
+
+-   represent each message as a bag-of-words
+
+-   using the training set, calculate all the conditional probabilities
+    in formula (1)
+
+-   use those to predict classes for messages in the test set
+
+-   evaluate effectiveness of the classifier by calculating the
+    corresponding metrics
+
+-   shortly summarize your work
+
+-   do not forget to submit both the (compiled) Rmd source file and the
+    .html output
+
+### Data pre-processing
+
+-   Read the *.csv* data files.
+-   Сlear your data from punctuation or other unneeded symbols.
+-   Clear you data from stop words. You don't want words as is, and, or
+    etc. to affect your probabilities distributions, so it is a wise
+    decision to get rid of them. Find list of stop words in the cms
+    under the lab task.
+-   Represent each test message as its bag-of-words. Here:
+    <https://machinelearningmastery.com/gentle-introduction-bag-words-model/>
+    you can find general introduction to the bag-of-words model and
+    examples on to create it.
+-   It is highly recommended to get familiar with R dataframes, it would
+    make the work much easier to do.
+-   Useful links:
+    -   <https://steviep42.github.io/webscraping/book/bagofwords.html#tidytext> -
+        example of using *tidytext* to count frequencies of the words.
+    -   Basics of Text Mining in R:
+        <http://rstudio-pubs-static.s3.amazonaws.com/256588_57b585da6c054349825cba46685d8464.html>
+        . Note that it also includes an example on how to create a bag
+        of words from your text document.
+
+```{r}
+list.files(getwd())
+list.files("data/0-authors")
+```
+
+```{r}
+test_path <- "data/0-authors/test.csv"
+train_path <- "data/0-authors/train.csv"
+
+stop_words <- read_file("stop_words.txt")
+# https://stackoverflow.com/questions/27195912/why-does-strsplit-return-a-list
+splitted_stop_words <- strsplit(stop_words, split='\r\n')
+splitted_stop_words <- splitted_stop_words[[1]]
+```
+
+```{r}
+train <-  read.csv(file = train_path, stringsAsFactors = FALSE)
+test <-  read.csv(file = test_path, stringsAsFactors = FALSE)
+```
+
+```{r}
+# note the power functional features of R bring us! 
+tidy_text <- unnest_tokens(train, 'splitted', 'text', token="words") %>%
+             filter(!splitted %in% splitted_stop_words)
+```
+
+```{r}
+authors_frame <- data.frame("word", "HP Lovecraft", "Edgar Alan Poe", "Mary Wollstonecraft Shelley ")
+
+```
+
+### Data visualization
+
+Each time you work with some data, you need to understand it before you
+start processing it. R has very powerful tools to make nice plots and
+visualization. Show what are the most common words for negative and
+positive examples as a histogram, word cloud etc. Be creative!
+
+```{r}
+sentences_by_author <- tidy_text %>%
+
+  dplyr::group_by(author) %>%
+
+  dplyr::summarise(n = n())
+
+ggplot(data = sentences_by_author, mapping = aes(x = author, y = n, fill = author)) +
+  geom_col(show.legend = F) + ylab(label = "number of sentences") + ggtitle("Number of sentences per author")
+```
+
+## Classifier implementation
+
+```{r}
+naiveBayes <- setRefClass("naiveBayes",
+                          
+       # here it would be wise to have some vars to store intermediate result
+       # frequency dict etc. Though pay attention to bag of wards! 
+       fields = list(author_df = "data.frame"),
+       methods = list(
+                    # prepare your training data as X - bag of words for each of your
+                    # messages and corresponding label for the message encoded as 0 or 1 
+                    # (binary classification task)
+                    fit = function(X)
+                    {
+                         # P(some_word|author) = (amount_of_some_word_in_author + 1)/(all_word_in_author + all_diff_word)
+                      tidy_text <- unnest_tokens(X, 'splitted', 'text', token = "words") %>% 
+                        filter(!splitted %in% splitted_stop_words)
+                      all_diff_word <- tidy_text %>% count(splitted,sort=TRUE) %>% nrow()
+                      words_by_authors <- tidy_text %>% count(splitted,sort=TRUE, author)
+                      all_word_in_edgar <- sum(words_by_authors$n[which(words_by_authors$author=="Edgar Alan Poe")])
+                      all_word_in_lovecraft <- sum(words_by_authors$n[which(words_by_authors$author=="HP Lovecraft")])
+                      all_word_in_mary <- sum(words_by_authors$n[which(words_by_authors$author=="Mary Wollstonecraft Shelley ")])
+                      for (word in unique(tidy_text$splitted)){
+                        amount_of_some_word_in_edgar <- words_by_authors$n[which((words_by_authors$splitted==word) & (words_by_authors$author=="Edgar Alan Poe"))]
+                        if (length(amount_of_some_word_in_edgar) == 0){
+                          amount_of_some_word_in_edgar <- 0
+                        }
+                        prob_word_in_edgar = (amount_of_some_word_in_edgar + 1)/(all_word_in_edgar + all_diff_word)
+                        author_df[word, "Edgar Alan Poe"] <<- prob_word_in_edgar
+                        amount_of_some_word_in_lovecraft <- words_by_authors$n[which((words_by_authors$splitted==word) & (words_by_authors$author=="HP Lovecraft"))]
+                        if (length(amount_of_some_word_in_lovecraft) == 0){
+                          amount_of_some_word_in_lovecraft <- 0
+                        }
+                        prob_word_in_lovecraft = (amount_of_some_word_in_lovecraft + 1)/(all_word_in_lovecraft + all_diff_word)
+                        author_df[word, "HP Lovecraft"] <<- prob_word_in_lovecraft
+                        
+                        amount_of_some_word_in_mary <- words_by_authors$n[which((words_by_authors$splitted==word) & (words_by_authors$author=="Mary Wollstonecraft Shelley "))]
+                        if (length(amount_of_some_word_in_mary) == 0){
+                          amount_of_some_word_in_mary <- 0
+                        }
+                        prob_word_in_mary = (amount_of_some_word_in_mary + 1)/(all_word_in_mary + all_diff_word)
+                        author_df[word, "Mary Wollstonecraft Shelley "] <<- prob_word_in_mary
+                      }
+                    
+                    },
+                    
+                    # return prediction for a single message 
+                    predict = function(message)
+                    {
+                      splitted_message <- strsplit(message, split=' ')
+                      splitted_message <- splitted_message[[1]]
+                      prob_of_edgar <- nrow(train%>%filter(author == "Edgar Alan Poe"))/nrow(train)
+                      prob_of_lovecraft <- nrow(train%>%filter(author == "HP Lovecraft"))/nrow(train)
+                      prob_of_mary <- nrow(train%>%filter(author == "Mary Wollstonecraft Shelley "))/nrow(train)
+                      
+                      prob_massage_in_edgar = 1
+                      prob_massage_in_lovecraft = 1
+                      prob_massage_in_mary = 1
+                      
+                      for (word in splitted_message) {
+                        if (!(is.na(author_df[word, "Edgar Alan Poe"]))){
+                          prob_massage_in_edgar = prob_massage_in_edgar *
+                            author_df[word, "Edgar Alan Poe"]
+                        }
+                        
+                        if (!(is.na(author_df[word, "HP Lovecraft"]))){
+                          prob_massage_in_lovecraft = prob_massage_in_lovecraft * author_df[word, "HP Lovecraft"]
+                        }
+                        if (!(is.na(author_df[word, "Mary Wollstonecraft Shelley "])))
+                            {
+                          prob_massage_in_mary = prob_massage_in_mary * author_df[word, "Mary Wollstonecraft Shelley "]
+                        }
+                      }
+                      
+                      prob_massage_in_edgar = prob_massage_in_edgar * prob_of_edgar
+                      prob_massage_in_lovecraft = prob_massage_in_lovecraft * prob_of_lovecraft
+                      prob_massage_in_mary = prob_massage_in_mary * prob_of_mary
+                      max_prob <- max(prob_massage_in_edgar, prob_massage_in_lovecraft, prob_massage_in_mary)
+                      if (max_prob == prob_massage_in_edgar){
+                        return("Edgar Alan Poe")
+                      }
+                      else if (max_prob == prob_massage_in_lovecraft){
+                        return("HP Lovecraft")
+                      }
+                      else{
+                        return("Mary Wollstonecraft Shelley ")
+                      }
+                    },
+                    score = function(X_test)
+                    {
+                      correct <- 0
+                      for (i in 1:nrow(X_test)){
+                        predicted <- model$predict(X_test[i, "text"])
+                        print(i)
+                        if (X_test$author[i] == predicted){
+                          correct <- correct + 1
+                        }
+                      }
+                      return(correct / nrow(X_test))
+                    }
+))
+
+model = naiveBayes(author_df = data.frame())
+model$fit(train)
+```
+
+```{r}
+# model$author_df
+model$predict("Lying on its side for it could not stand up alone was the exotic spiky figure which in his monstrous dream he had broken off the fantastic balustrade.")
+model$score(test)
+```
+
+## Measure effectiveness of your classifier
+
+-   Accuracy of our classifier is 0.7854954.
+
+## Conclusions
+
+Here we implemented 3 methods: fit, predict and score.
+
+Fit creates dataframe with words as indexes of raw and authors as
+indexes of column. Values are probabilities of getting this word with
+condition that we already know an author. We find it using a formula :
+
+P(some_word\|author) = (amount_of_some_word_in_author +
+1)/(all_word_in_author + all_diff_word)
+
+Predict finds which author is most likely wrote given message. Here we
+use this formula for every author and return author with the biggest
+value of probability:
+
+P(author\|message) = P(some_word1\|author) \* P(some_word2\|author) ...
+\* P(some_word{len_of_message}\|author)  \* P(author)
+
+Score checks whether predict was correct and count percent of correct
+answers
+
+The biggest plus of this method are that it is easy in implementation.
+
+Cons are that it just searches by words, and not phrases, limited by
+words, that we had in train, there better ways to predict.
